@@ -14,8 +14,8 @@ print(len(sago.data))
 # initialize parameters
 init_pars = params()
 #shifter_labels = ['constant','needs_level','prob_help_adl']
-#shifter_labels = ['constant','needs_level','prob_help_adl','help_adl_miss']
-shifter_labels = ['constant']
+shifter_labels = ['constant','needs_level','prob_help_adl','help_adl_miss']
+#shifter_labels = ['constant']
 for s in sago.attr_labels:
      for h in shifter_labels:
           if s in ['svc_inf','svc_avq','svc_avd','cons','wait'] and h=='constant':
@@ -42,17 +42,23 @@ init_pars.restart_from('ref')
 for d in range(n_attr):
      for u in range(d,n_attr):
          if d==u:
-               if d not in [3,4,8]:
-                    p = param('uh','ln_sig_'+str(d)+str(u), value = np.log(0.5),free=True)
-               else :
-                    p = param('uh','ln_sig_'+str(d)+str(u), value = -10,free=False)
+                p = param('uh','ln_sig_'+str(d)+str(u), value = np.log(1.0),free=True)
          else:
-               #if (d not in [0,1,2,3,4,6,7,8,9]) and (u not in [0,1,2,3,4,6,7,8,9]):
+                if d in [0,1,2] and u in [0,1,2]:
                     p = param('uh','rho_'+str(d)+str(u),value = 0,free=False)
-               #else :
-               #     p = param('uh','rho_'+str(d)+str(u),value = 0,free=True)
+                elif d in [0,1,2] and u in [5,6,7,9]:
+                    p = param('uh','rho_'+str(d)+str(u),value = 0,free=False) 
+                elif d in [5,6,7] and u in [5,6,7]:
+                    p = param('uh','rho_'+str(d)+str(u),value = 1.0,free=False)                    
+                else :
+                    p = param('uh','rho_'+str(d)+str(u),value = 0,free=True)
          init_pars.add_param(p)
 
+
+#restrict_attr = [3,4,8]
+restrict_attr = [3,4,8]
+for r in restrict_attr:
+    init_pars.restrict_covar_attr(r)
 print(init_pars.table())
 
 model = logit(with_uh = True)

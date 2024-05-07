@@ -82,10 +82,12 @@ class survey:
         shifters = self.data[shifter_labels].values
         return shifters
 
+
 # Create a class for groups of parameters:
 class params:
     def __init__(self):
         self.pars = []
+        self.covar = [x for x in range(10)]
         return
     def add_param(self, this):
         self.pars.append(this)
@@ -100,6 +102,13 @@ class params:
         return len([p for p in self.pars if p.free])
     def extract_freepars(self):
         return np.array([p.value for p in self.pars if p.free])
+    def restrict_covar_attr(self,attr):
+        self.covar.remove(attr)
+        for p in self.pars:
+            if p.group=='uh' and str(attr) in p.label:
+                p.free = False 
+                p.value = 0.0
+        return 
     def restrict(self,group,label,fix_value):
         for p in self.pars:
             if p.group == group and p.label == label:
@@ -130,48 +139,41 @@ class params:
 
     def parse(self):
         self.set_groups()
-        n_uh = 10
+        n_attr = 10
+        n_uh = len(self.covar)
         par_groups = []
         for g in self.groups:
             if g=='uh':
-                Sig = np.zeros((n_uh,n_uh))
-                f = np.zeros((n_uh,n_uh))
+                Sig = np.zeros((n_attr,n_attr))
+                f = np.zeros((n_attr,n_attr))
                 p = np.array([p.value for p in self.pars if p.group==g])
-                free = np.array([p.free for p in self.pars if p.group==g])
+                # unpack
                 k = 0
-                for i in range(n_uh):
-                    for j in range(i,n_uh):
+                for i in range(n_attr):
+                    for j in range(i,n_attr):
                         Sig[i,j] = p[k]
-                        f[i,j] = free[k]
-                        if i==j:
-                            if f[i,j]:
-                                Sig[i,j] = np.exp(Sig[i,j])**2
-                            else:
-                                Sig[i,j] = 1
-                        else :
-                            if f[i,j]:
-                                Sig[i,j] = np.tanh(Sig[i,j])
-                            else :
-                                Sig[i,j] = 0
-                        k +=1
-                # pass again for off diagonals
-                for i in range(n_uh):
-                    for j in range(i,n_uh):
-                        if i!=j:
-                            Sig[i,j] = Sig[i,j] * np.sqrt(Sig[i,i]) * np.sqrt(Sig[j,j])
-                # now copy off diagonals
-                for i in range(n_uh):
-                    for j in range(i,n_uh):
                         if i!=j:
                             Sig[j,i] = Sig[i,j]
-                # take choleski
-                self.Sig = Sig
-                self.L = np.linalg.cholesky(Sig)
+                        k +=1
+                # keep only column and rows of attributes with uh
+                Sig_free = Sig[np.ix_(self.covar,self.covar)]
+                # reformat variances first 
                 for i in range(n_uh):
-                    for j in range(i,n_uh):
-                        if i==j:
-                            if f[i,j]==False:
-                                self.L[i,j] = 0
+                    Sig_free[i,i] = np.exp(Sig_free[i,i])
+                # reformat covariances
+                for i in range(n_uh):
+                    for j in range(n_uh):
+                        if i!=j:
+                            Sig_free[i,j] = np.tanh(Sig_free[i,j])*np.sqrt(Sig_free[i,i]*Sig_free[j,j])
+                # cholesky
+                #print(self.table())
+                #print(Sig_free)
+                print(np.linalg.eigvals(Sig_free)) 
+                L_free = np.linalg.cholesky(Sig_free)
+                #print(L_free)
+                self.L = np.zeros((n_attr,n_attr))
+                self.L[np.ix_(self.covar,self.covar)] = L_free 
+                #print(self.L)
                 par_groups.append(self.L)
             else :
                 par_groups.append(np.array([p.value for p in self.pars if p.group==g]))
@@ -344,7 +346,7 @@ def prob_uh(cps):
         for d in range(n_d):
             ps[i] += np.prod(cps[ii:ii+n_scn,d])
         ii += n_scn
-        ps[i] = max(ps[i],1e-12)/n_d
+        ps[i] = max(ps[i],1e-6)/n_d
     return ps
 
 def prob_no(cps):
@@ -354,7 +356,7 @@ def prob_no(cps):
     ps = np.zeros(n_resp,dtype='float64')
     ii = 0
     for i in range(n_resp):
-        ps[i] = max(np.prod(cps[ii:ii+n_scn]),1e-12)
+        ps[i] = max(np.prod(cps[ii:ii+n_scn]),1e-6)
         ii += n_scn
     return ps
 
