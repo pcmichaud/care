@@ -1,0 +1,14 @@
+OK* needs pas indexé par option 
+OK* pas besoin de svc_rate 
+OK* prefix inf, avq, avd
+OK* inclure smaf 
+OK* rename shifter_ comme needs_level
+OK* rescale shifter_future_income mensuel, rename income 
+OK* vérifier revenu > cost pour toutes les options
+OK* rajouter prof et avd, même format 
+OK* rajouter milieu de vie, liv
+OK* living arrangement, categorical 
+OK* supplier, categorical, sup
+OK* age (age présent) et target_age 
+OK* waiting time (1 = one year), rename wait
+OK* pas de manquant sur shifters, donc voir combien obs si élimine. : on perd 526 obs
